@@ -1,9 +1,7 @@
-version: '3'
-
 services:
 
   keycloak:
-    image: quay.io/keycloak/keycloak:21.1
+    image: quay.io/keycloak/keycloak:26.0.8
     command: start-dev
     ports:
       - 8080:8080
@@ -14,10 +12,12 @@ services:
       - KC_DB_URL=jdbc:mysql://db:3306/keycloak
       - KC_DB_USERNAME=root
       - KC_DB_PASSWORD=root
+    networks:
+      - keycloak
     depends_on:
       db:
         condition: service_healthy
-  
+
   db:
     image: mysql:8.0.30-debian
     volumes:
@@ -27,8 +27,32 @@ services:
       - MYSQL_DATABASE=keycloak
     security_opt:
       - seccomp:unconfined
+    networks:
+      - keycloak
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       interval: 5s
       timeout: 10s
       retries: 3
+
+  mailhog-keycloak:
+    container_name: mailhog-keycloak
+    hostname: mailhog-keycloak
+    image: mailhog/mailhog
+    ports:
+      - 8026:8025
+      - 1026:1025
+    networks:
+      - keycloak
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+networks:
+  keycloak:
+    driver: bridge
